@@ -142,7 +142,11 @@ def generate_county(name):
     return '\n'.join(lines)
 
 if __name__ == '__main__':
-    nc = generate_county('Carteret')
-    nc = nc_swap(nc)
-    nc = nc_scale(nc, 10, 10)
-    print nc
+    for i, county in enumerate(COUNTIES):
+        x = i % 10
+        y = i / 10
+        print '(%s)' % county.name
+        nc = generate_county(county.name)
+        nc = nc_translate(nc, x * 6, y * 8)
+        nc = nc_scale(nc, 10, 10)
+        print nc
