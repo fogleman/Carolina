@@ -78,11 +78,11 @@ def nc_scale(nc, sx, sy):
         for token in line.split():
             if token[0] == 'X':
                 token = 'X' + str(float(token[1:]) * sx)
-            if token[0] == 'Y':
+            elif token[0] == 'Y':
                 token = 'Y' + str(float(token[1:]) * sy)
-            if token[0] == 'I':
+            elif token[0] == 'I':
                 token = 'I' + str(float(token[1:]) * sx)
-            if token[0] == 'J':
+            elif token[0] == 'J':
                 token = 'J' + str(float(token[1:]) * sy)
             tokens.append(token)
         lines.append(' '.join(tokens))
@@ -95,29 +95,54 @@ def nc_translate(nc, dx, dy):
         for token in line.split():
             if token[0] == 'X':
                 token = 'X' + str(float(token[1:]) + dx)
-            if token[0] == 'Y':
+            elif token[0] == 'Y':
                 token = 'Y' + str(float(token[1:]) + dy)
             tokens.append(token)
         lines.append(' '.join(tokens))
     return '\n'.join(lines)
 
-def run(name):
+def nc_swap(nc):
+    lines = []
+    for line in nc.split('\n'):
+        tokens = []
+        for token in line.split():
+            if token[0] == 'X':
+                token = 'Y' + str(float(token[1:]))
+            elif token[0] == 'Y':
+                token = 'X' + str(-float(token[1:]))
+            elif token[0] == 'I':
+                token = 'J' + str(float(token[1:]))
+            elif token[0] == 'J':
+                token = 'I' + str(-float(token[1:]))
+            tokens.append(token)
+        lines.append(' '.join(tokens))
+    nc = '\n'.join(lines)
+    x, y, _, _ = nc_bounds(nc)
+    nc = nc_translate(nc, -x, -y)
+    return nc
+
+def generate_county(name):
+    lines = []
     shape = load_county_shape('37', name)
     polygons = get_polygons(shape, SCALE)
     for polygon in polygons:
         points = list(polygon.exterior.coords)
-        print 'G0 Z%f' % G0Z
-        print 'G0 X%f Y%f' % points[0]
-        print 'G1 Z%f' % G1Z
+        lines.append('G0 Z%f' % G0Z)
+        lines.append('G0 X%f Y%f' % points[0])
+        lines.append('G1 Z%f' % G1Z)
         for point in points:
-            print 'G1 X%f Y%f' % point
+            lines.append('G1 X%f Y%f' % point)
     nc = nc_load_text(name)
     nc = nc_scale(nc, 0.25, 0.25)
     polygon = max(polygons, key=attrgetter('area'))
     _, _, w, h = nc_bounds(nc)
     cx, cy = polygon.centroid.coords[0]
     nc = nc_translate(nc, cx - w / 2, cy - h / 2)
-    print nc
+    lines.extend(nc.split('\n'))
+    return '\n'.join(lines)
 
 if __name__ == '__main__':
-    run('Mecklenburg')
+    nc = generate_county('Carteret')
+    nc = nc_swap(nc)
+    nc = nc_scale(nc, 10, 10)
+    print nc
