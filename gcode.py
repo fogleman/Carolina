@@ -1,5 +1,5 @@
 from counties import COUNTIES
-from math import radians, asinh, tan
+from math import radians, asinh, tan, sin, cos
 from operator import attrgetter
 from shapely.geometry import Polygon
 from shapely.affinity import translate
@@ -97,6 +97,39 @@ def nc_translate(nc, dx, dy):
                 token = 'X' + str(float(token[1:]) + dx)
             elif token[0] == 'Y':
                 token = 'Y' + str(float(token[1:]) + dy)
+            tokens.append(token)
+        lines.append(' '.join(tokens))
+    return '\n'.join(lines)
+
+def nc_rotate(nc, angle):
+    c = cos(radians(angle))
+    s = sin(radians(angle))
+    lines = []
+    x = y = i = j = 0
+    for line in nc.split('\n'):
+        for token in line.split():
+            if token[0] == 'X':
+                x = float(token[1:])
+            elif token[0] == 'Y':
+                y = float(token[1:])
+            elif token[0] == 'I':
+                i = float(token[1:])
+            elif token[0] == 'J':
+                j = float(token[1:])
+        rx = x * c - y * s
+        ry = y * c + x * s
+        ri = i * c - j * s
+        rj = j * c + i * s
+        tokens = []
+        for token in line.split():
+            if token[0] == 'X':
+                token = 'X' + str(rx)
+            elif token[0] == 'Y':
+                token = 'Y' + str(ry)
+            elif token[0] == 'I':
+                token = 'I' + str(ri)
+            elif token[0] == 'J':
+                token = 'J' + str(rj)
             tokens.append(token)
         lines.append(' '.join(tokens))
     return '\n'.join(lines)
