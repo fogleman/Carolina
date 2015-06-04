@@ -60,6 +60,19 @@ class GCode(object):
         b = self.bounds
         return Size(b.x2 - b.x1, b.y2 - b.y1)
 
+    @property
+    def width(self):
+        return self.size.w
+
+    @property
+    def height(self):
+        return self.size.h
+
+    @property
+    def area(self):
+        w, h = self.size
+        return w * h
+
     def move(self, x, y, ax, ay):
         x1, y1, x2, y2 = self.bounds
         dx = x1 + (x2 - x1) * ax - x
@@ -111,10 +124,10 @@ class GCode(object):
                     i = float(token[1:])
                 elif token[0] == 'J':
                     j = float(token[1:])
-            rx = x * c - y * s
-            ry = y * c + x * s
-            ri = i * c - j * s
-            rj = j * c + i * s
+            rx = round(x * c - y * s, 6)
+            ry = round(y * c + x * s, 6)
+            ri = round(i * c - j * s, 6)
+            rj = round(j * c + i * s, 6)
             tokens = []
             for token in line.split():
                 if token[0] == 'X':
