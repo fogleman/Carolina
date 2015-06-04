@@ -141,3 +141,16 @@ class GCode(object):
                 tokens.append(token)
             lines.append(' '.join(tokens))
         return GCode(lines)
+
+    def depth(self, g0z, g1z):
+        lines = []
+        for line in self.lines:
+            tokens = []
+            for token in line.split():
+                if token[0] == 'Z':
+                    z = float(token[1:])
+                    z = g0z if z > 0 else g1z
+                    token = 'Z' + str(z)
+                tokens.append(token)
+            lines.append(' '.join(tokens))
+        return GCode(lines)

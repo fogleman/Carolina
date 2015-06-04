@@ -13,8 +13,9 @@ SCALE = 520
 F = 50
 G0Z = 0.2
 G1Z = -0.04
+G1Z_TEXT = -0.035
 
-HEADER = GCode(['G90', 'G20', 'G0 Z%s' % G0Z, 'M4', 'G4 P2.0'])
+HEADER = GCode(['G90', 'G20', 'G0 Z%s' % G0Z, 'M4', 'G4 P2.0', 'F%s' % F])
 FOOTER = GCode(['G0 Z%s' % G0Z, 'M8'])
 
 def mercator(lat, lng, scale):
@@ -64,6 +65,7 @@ def best_scale(width, height):
 
 def generate_text(name, x, y):
     g = GCode.from_file('text/%s.nc' % name)
+    g = g.depth(G0Z, G1Z_TEXT)
     g = g.scale(0.25, 0.25)
     g = g.translate(x - g.size.w / 2, y - g.size.h / 2)
     return g
