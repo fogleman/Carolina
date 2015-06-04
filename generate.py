@@ -57,34 +57,26 @@ def best_scale(width, height):
     print result
     return result
 
+def generate_text(name, x, y):
+    g = GCode.from_file('text/%s.nc' % name)
+    g = g.scale(0.25, 0.25)
+    g = g.translate(x - g.size.w / 2, y - g.size.h / 2)
+    return g
+
 def generate_county(name):
-    lines = []
+    g = GCode()
     shape = load_county_shape('37', name)
     polygons = get_polygons(shape, SCALE)
     for polygon in polygons:
-        points = list(polygon.exterior.coords)
-        lines.append('G0 Z%f' % G0Z)
-        lines.append('G0 X%f Y%f' % points[0])
-        lines.append('G1 Z%f' % G1Z)
-        for point in points:
-            lines.append('G1 X%f Y%f' % point)
-    g = GCode.from_file('text/%s.nc' % name)
-    g = g.scale(0.25, 0.25)
-    w, h = g.size
+        g += GCode.from_polygon(polygon, G0Z, G1Z)
     polygon = max(polygons, key=attrgetter('area'))
-    cx, cy = polygon.centroid.coords[0]
-    g = g.translate(cx - w / 2, cy - h / 2)
-    return GCode(lines) + g
+    x, y = polygon.centroid.coords[0]
+    g += generate_text(name, x, y)
+    return g
 
 if __name__ == '__main__':
     g = generate_county('Wake')
     g = g.scale(10, 10)
+    g = g.rotate(45)
+    g = g.move(0, 0, 0, 0)
     print g
-    # for i, county in enumerate(COUNTIES):
-    #     x = i % 10
-    #     y = i / 10
-    #     print '(%s)' % county.name
-    #     g = generate_county(county.name)
-    #     g = g.translate(x * 6, y * 8)
-    #     g = g.scale(10, 10)
-    #     print g

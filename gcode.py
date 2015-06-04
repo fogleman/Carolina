@@ -5,10 +5,24 @@ Bounds = namedtuple('Bounds', ['x1', 'y1', 'x2', 'y2'])
 Size = namedtuple('Size', ['w', 'h'])
 
 class GCode(object):
+
     @staticmethod
     def from_file(path):
         with open(path, 'r') as fp:
             return GCode(fp.read())
+
+    @staticmethod
+    def from_polygon(polygon, g0z, g1z):
+        lines = []
+        points = list(polygon.exterior.coords)
+        lines.append('G0 Z%f' % g0z)
+        lines.append('G0 X%f Y%f' % points[0])
+        lines.append('G1 Z%f' % g1z)
+        for point in points:
+            lines.append('G1 X%f Y%f' % point)
+        lines.append('G0 Z%f' % g0z)
+        return GCode(lines)
+
     def __init__(self, code=None):
         if code is None:
             self.code = ''
@@ -18,13 +32,17 @@ class GCode(object):
             self.code = code.code
         else:
             self.code = '\n'.join(map(str, code))
+
     def __str__(self):
         return self.code
+
     def __add__(self, other):
         return GCode(self.lines + GCode(other).lines)
+
     @property
     def lines(self):
         return self.code.split('\n')
+
     @property
     def bounds(self):
         x = []
@@ -36,17 +54,18 @@ class GCode(object):
                 if token[0] == 'Y':
                     y.append(float(token[1:]))
         return Bounds(min(x), min(y), max(x), max(y))
+
     @property
     def size(self):
         b = self.bounds
         return Size(b.x2 - b.x1, b.y2 - b.y1)
+
     def move(self, x, y, ax, ay):
-        minx, miny, maxx, maxy = self.bounds
-        w = maxx - minx
-        h = maxy - miny
-        dx = minx + w * ax - x
-        dy = miny + h * ay - y
+        x1, y1, x2, y2 = self.bounds
+        dx = x1 + (x2 - x1) * ax - x
+        dy = y1 + (y2 - y1) * ay - y
         return self.translate(-dx, -dy)
+
     def translate(self, dx, dy):
         lines = []
         for line in self.lines:
@@ -59,6 +78,7 @@ class GCode(object):
                 tokens.append(token)
             lines.append(' '.join(tokens))
         return GCode(lines)
+
     def scale(self, sx, sy):
         lines = []
         for line in self.lines:
@@ -75,6 +95,7 @@ class GCode(object):
                 tokens.append(token)
             lines.append(' '.join(tokens))
         return GCode(lines)
+
     def rotate(self, angle):
         c = cos(radians(angle))
         s = sin(radians(angle))
@@ -107,23 +128,3 @@ class GCode(object):
                 tokens.append(token)
             lines.append(' '.join(tokens))
         return GCode(lines)
-
-# def nc_swap(nc):
-#     lines = []
-#     for line in nc.split('\n'):
-#         tokens = []
-#         for token in line.split():
-#             if token[0] == 'X':
-#                 token = 'Y' + str(float(token[1:]))
-#             elif token[0] == 'Y':
-#                 token = 'X' + str(-float(token[1:]))
-#             elif token[0] == 'I':
-#                 token = 'J' + str(float(token[1:]))
-#             elif token[0] == 'J':
-#                 token = 'I' + str(-float(token[1:]))
-#             tokens.append(token)
-#         lines.append(' '.join(tokens))
-#     nc = '\n'.join(lines)
-#     x, y, _, _ = nc_bounds(nc)
-#     nc = nc_translate(nc, -x, -y)
-#     return nc
