@@ -66,7 +66,8 @@ def pack_bins(width, height, sizes, seed=None):
             b = Bin(width, height)
             b.add(item)
             bins.append(b)
-    return bins
+    result = [b.layout() for b in bins]
+    return result
 
 def best_seed(width, height, sizes, iterations):
     best = (len(sizes) + 1, None)
@@ -185,7 +186,7 @@ def main():
     seed = best_seed(6, 8, sizes, 100)
     bins = pack_bins(6, 8, sizes, seed)
     for b in bins:
-        print b.layout()
+        print b
     print seed
     print len(bins)
 

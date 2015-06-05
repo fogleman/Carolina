@@ -4,6 +4,7 @@ from math import radians, asinh, tan, sin, cos
 from operator import attrgetter
 from shapely.geometry import Polygon
 from shapely.affinity import translate
+import pack
 import shapefile
 
 SHAPEFILE = 'shapefiles/cb_2013_us_county_5m/cb_2013_us_county_5m.shp'
@@ -90,8 +91,28 @@ def generate_counties(shapes):
         result[name] = generate_county(shapes, name)
     return result
 
+def pack_counties(counties, padding):
+    counties = counties.values()
+    sizes = [county.size for county in counties]
+    sizes = [(w + padding, h + padding) for w, h in sizes]
+    bins = pack.pack_bins(6, 8, sizes)
+    result = GCode()
+    for i, b in enumerate(bins):
+        for item in b:
+            index, rotated, (x, y, _, _) = item
+            g = counties[index]
+            if rotated:
+                g = g.rotate(90).origin()
+            g = g.translate(x, y)
+            g = g.translate(i * 30, 0)
+            result += g
+    result = result.scale(0.1, 0.1)
+    print result
+
 if __name__ == '__main__':
     shapes = load_county_shapes('37')
+    counties = generate_counties(shapes)
+    bins = pack_counties(counties, 0.25)
     # counties = generate_counties(shapes)
     # print counties
     # best_scale(6, 8)
@@ -103,4 +124,4 @@ if __name__ == '__main__':
     #     x += g.width + 0.5
     #     result += g
     # print result
-    print generate_county(shapes, 'Wake')
+    # print generate_county(shapes, 'Wake')
