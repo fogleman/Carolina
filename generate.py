@@ -96,7 +96,8 @@ def pack_counties(counties, padding):
     counties = counties.values()
     sizes = [county.size for county in counties]
     sizes = [(w + padding * 2, h + padding * 2) for w, h in sizes]
-    bins = pack.pack_bins(6, 8, sizes)
+    seed = 1450999150
+    bins = pack.pack_bins(6, 8, sizes, seed)
     for b in bins:
         bg = GCode()
         for item in b:
