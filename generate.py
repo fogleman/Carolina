@@ -80,7 +80,7 @@ def generate_county(shapes, name):
     polygon = max(polygons, key=attrgetter('area'))
     x, y = polygon.centroid.coords[0]
     g += generate_text(name, x, y)
-    g = min([g.rotate(a) for a in range(0, 180, 5)], key=attrgetter('width'))
+    g = min([g.rotate(a) for a in range(0, 180, 5)], key=attrgetter('height'))
     g = g.origin()
     g = HEADER + g + FOOTER
     return g
@@ -96,7 +96,7 @@ def pack_counties(counties, padding):
     counties = counties.values()
     sizes = [county.size for county in counties]
     sizes = [(w + padding * 2, h + padding * 2) for w, h in sizes]
-    bins = pack.pack_bins(24, 18, sizes)
+    bins = pack.pack_bins(6, 8, sizes)
     for b in bins:
         bg = GCode()
         for item in b:
@@ -114,7 +114,7 @@ if __name__ == '__main__':
     counties = generate_counties(shapes)
     bins = pack_counties(counties, 0.25)
     for i, g in enumerate(bins):
-        surface = g.render(0, 0, 24, 18, 96)
+        surface = g.render(0, 0, 6, 8, 96)
         surface.write_to_png('bins/%02d.png' % i)
     # counties = generate_counties(shapes)
     # print counties
