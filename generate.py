@@ -104,7 +104,7 @@ def pack_counties(counties, padding):
             index, rotated, (x, y, _, _) = item
             g = counties[index]
             if rotated:
-                g = g.rotate(90).origin()
+                g = g.rotate(-90).origin()
             g = g.translate(x + p, y + p)
             bg += g
         result.append(bg)
