@@ -93,10 +93,9 @@ def generate_counties(shapes):
 
 def pack_counties(counties, padding):
     result = []
-    p = padding
     counties = counties.values()
     sizes = [county.size for county in counties]
-    sizes = [(w + p * 2, h + p * 2) for w, h in sizes]
+    sizes = [(w + padding * 2, h + padding * 2) for w, h in sizes]
     bins = pack.pack_bins(24, 18, sizes)
     for b in bins:
         bg = GCode()
@@ -105,7 +104,7 @@ def pack_counties(counties, padding):
             g = counties[index]
             if rotated:
                 g = g.rotate(-90).origin()
-            g = g.translate(x + p, y + p)
+            g = g.translate(x + padding, y + padding)
             bg += g
         result.append(bg)
     return result
