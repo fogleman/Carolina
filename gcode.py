@@ -1,5 +1,6 @@
 from collections import namedtuple
-from math import radians, sin, cos
+from math import radians, sin, cos, hypot, atan2
+import cairo
 
 DECIMALS = 6
 
@@ -159,3 +160,55 @@ class GCode(object):
                 tokens.append(token)
             lines.append(' '.join(tokens))
         return GCode(lines)
+
+    def render(self, x1, y1, x2, y2, scale):
+        width = int(round((x2 - x1) * scale))
+        height = int(round((y2 - y1) * scale))
+        surface = cairo.ImageSurface(cairo.FORMAT_RGB24, width, height)
+        dc = cairo.Context(surface)
+        dc.set_source_rgb(0, 0, 0)
+        dc.paint()
+        dc.scale(scale, -scale)
+        dc.translate(0, y1 - y2)
+        dc.set_line_cap(cairo.LINE_CAP_ROUND)
+        dc.set_line_join(cairo.LINE_JOIN_ROUND)
+        dc.set_source_rgb(1, 1, 1)
+        x = y = z = i = j = 0
+        px = py = 0
+        for line in self.lines:
+            tokens = line.split()
+            if not tokens:
+                continue
+            if tokens[0][0] == 'N':
+                tokens.pop(0)
+            for token in tokens:
+                if token[0] == 'X':
+                    x = float(token[1:])
+                elif token[0] == 'Y':
+                    y = float(token[1:])
+                elif token[0] == 'Z':
+                    z = float(token[1:])
+                elif token[0] == 'I':
+                    i = float(token[1:])
+                elif token[0] == 'J':
+                    j = float(token[1:])
+            if tokens[0] == 'G0':
+                dc.move_to(x, y)
+            elif tokens[0] == 'G1':
+                dc.line_to(x, y)
+            elif tokens[0] in ['G2', 'G3']:
+                cx = px + i
+                cy = py + j
+                r = hypot(i, j)
+                a1 = atan2(py - cy, px - cx)
+                a2 = atan2(y - cy, x - cx)
+                dc.new_sub_path()
+                if tokens[0] == 'G3':
+                    dc.arc(cx, cy, r, a1, a2)
+                else:
+                    dc.arc_negative(cx, cy, r, a1, a2)
+            dc.set_line_width(-z * 2)
+            dc.stroke()
+            dc.move_to(x, y)
+            px, py = x, y
+        return surface

@@ -13,8 +13,8 @@ SCALE = 525
 
 F = 50
 G0Z = 0.2
-G1Z = -0.04
-G1Z_TEXT = -0.035
+G1Z = -0.125/2
+G1Z_TEXT = -0.025
 
 HEADER = GCode(['G90', 'G20', 'G0 Z%s' % G0Z, 'M4', 'G4 P2.0', 'F%s' % F])
 FOOTER = GCode(['G0 Z%s' % G0Z, 'M8'])
@@ -67,7 +67,7 @@ def best_scale(width, height):
 def generate_text(name, x, y):
     g = GCode.from_file('text/%s.nc' % name)
     g = g.depth(G0Z, G1Z_TEXT)
-    g = g.scale(0.25, 0.25)
+    g = g.scale(0.35, 0.35)
     g = g.translate(x - g.width / 2, y - g.height / 2)
     return g
 
@@ -92,27 +92,31 @@ def generate_counties(shapes):
     return result
 
 def pack_counties(counties, padding):
+    result = []
+    p = padding
     counties = counties.values()
     sizes = [county.size for county in counties]
-    sizes = [(w + padding, h + padding) for w, h in sizes]
-    bins = pack.pack_bins(6, 8, sizes)
-    result = GCode()
-    for i, b in enumerate(bins):
+    sizes = [(w + p * 2, h + p * 2) for w, h in sizes]
+    bins = pack.pack_bins(24, 18, sizes)
+    for b in bins:
+        bg = GCode()
         for item in b:
             index, rotated, (x, y, _, _) = item
             g = counties[index]
             if rotated:
                 g = g.rotate(90).origin()
-            g = g.translate(x, y)
-            g = g.translate(i * 30, 0)
-            result += g
-    result = result.scale(0.1, 0.1)
-    print result
+            g = g.translate(x + p, y + p)
+            bg += g
+        result.append(bg)
+    return result
 
 if __name__ == '__main__':
     shapes = load_county_shapes('37')
     counties = generate_counties(shapes)
     bins = pack_counties(counties, 0.25)
+    for i, g in enumerate(bins):
+        surface = g.render(0, 0, 24, 18, 96)
+        surface.write_to_png('bins/%02d.png' % i)
     # counties = generate_counties(shapes)
     # print counties
     # best_scale(6, 8)
