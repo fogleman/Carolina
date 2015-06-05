@@ -7,8 +7,8 @@ from shapely.affinity import translate
 import shapefile
 
 SHAPEFILE = 'shapefiles/cb_2013_us_county_5m/cb_2013_us_county_5m.shp'
-SCALE = 400
-SCALE = 520
+# SCALE = 400
+SCALE = 525
 
 F = 50
 G0Z = 0.2
@@ -67,30 +67,40 @@ def generate_text(name, x, y):
     g = GCode.from_file('text/%s.nc' % name)
     g = g.depth(G0Z, G1Z_TEXT)
     g = g.scale(0.25, 0.25)
-    g = g.translate(x - g.size.w / 2, y - g.size.h / 2)
+    g = g.translate(x - g.width / 2, y - g.height / 2)
     return g
 
-def generate_county(name):
+def generate_county(shapes, name):
     g = GCode()
-    shape = load_county_shapes('37')[name]
+    shape = shapes[name]
     polygons = get_polygons(shape, SCALE)
     for polygon in polygons:
         g += GCode.from_polygon(polygon, G0Z, G1Z)
     polygon = max(polygons, key=attrgetter('area'))
     x, y = polygon.centroid.coords[0]
     g += generate_text(name, x, y)
-    g = HEADER + g + FOOTER
     g = min([g.rotate(a) for a in range(0, 180, 5)], key=attrgetter('width'))
-    return g.move(0, 0, 0, 0)
+    g = g.origin()
+    g = HEADER + g + FOOTER
+    return g
+
+def generate_counties(shapes):
+    result = {}
+    for name, shape in shapes.items():
+        result[name] = generate_county(shapes, name)
+    return result
 
 if __name__ == '__main__':
-    best_scale(6, 8)
+    shapes = load_county_shapes('37')
+    # counties = generate_counties(shapes)
+    # print counties
+    # best_scale(6, 8)
     # result = GCode()
     # x = 0
     # for county in COUNTIES[:10]:
     #     g = generate_county(county.name)
     #     g = g.translate(x, 0)
-    #     x += g.size.w + 0.5
+    #     x += g.width + 0.5
     #     result += g
     # print result
-    # print generate_county('Wake')
+    print generate_county(shapes, 'Wake')

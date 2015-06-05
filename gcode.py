@@ -1,8 +1,10 @@
 from collections import namedtuple
 from math import radians, sin, cos
 
+DECIMALS = 6
+
 Bounds = namedtuple('Bounds', ['x1', 'y1', 'x2', 'y2'])
-Size = namedtuple('Size', ['w', 'h'])
+Size = namedtuple('Size', ['width', 'height'])
 
 class GCode(object):
 
@@ -62,16 +64,19 @@ class GCode(object):
 
     @property
     def width(self):
-        return self.size.w
+        return self.size.width
 
     @property
     def height(self):
-        return self.size.h
+        return self.size.height
 
     @property
     def area(self):
         w, h = self.size
         return w * h
+
+    def origin(self):
+        return self.move(0, 0, 0, 0)
 
     def move(self, x, y, ax, ay):
         x1, y1, x2, y2 = self.bounds
@@ -124,10 +129,10 @@ class GCode(object):
                     i = float(token[1:])
                 elif token[0] == 'J':
                     j = float(token[1:])
-            rx = round(x * c - y * s, 6)
-            ry = round(y * c + x * s, 6)
-            ri = round(i * c - j * s, 6)
-            rj = round(j * c + i * s, 6)
+            rx = round(x * c - y * s, DECIMALS)
+            ry = round(y * c + x * s, DECIMALS)
+            ri = round(i * c - j * s, DECIMALS)
+            rj = round(j * c + i * s, DECIMALS)
             tokens = []
             for token in line.split():
                 if token[0] == 'X':
