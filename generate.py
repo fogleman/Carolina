@@ -71,12 +71,12 @@ def mercator(lat, lng, scale):
     return (x, y)
 
 def load_county_shapes(statefp):
-    result = {}
+    result = []
     sf = shapefile.Reader(SHAPEFILE)
     for item in sf.shapeRecords():
         if item.record[0] != statefp:
             continue
-        result[item.record[5]] = item.shape
+        result.append((item.record[5], item.shape))
     return result
 
 def get_polygons(shape, scale):
@@ -142,9 +142,9 @@ def generate_text(name, x, y, scale, angle):
     g = g.move(x, y, 0.5, 0.5)
     return g
 
-def generate_county(shapes, name, text):
+def generate_county(shape, name, text):
     result = []
-    polygons = get_polygons(shapes[name], SCALE)
+    polygons = get_polygons(shape, SCALE)
     max_polygon = max(polygons, key=attrgetter('area'))
     for i, polygon in enumerate(polygons):
         g = GCode.from_polygon(polygon, G0Z, G1Z_BEVEL)
@@ -161,8 +161,8 @@ def generate_county(shapes, name, text):
 
 def generate_counties(shapes, text):
     result = []
-    for name, shape in shapes.items():
-        result.extend(generate_county(shapes, name, text))
+    for name, shape in shapes:
+        result.extend(generate_county(shape, name, text))
     return result
 
 def render_counties(counties):
@@ -173,20 +173,20 @@ def render_counties(counties):
         surface.write_to_png('pngs/%s.png' % name)
 
 if __name__ == '__main__':
+    seed = 44654645
     shapes = load_county_shapes('37')
 
     counties = generate_counties(shapes, True)
-    bins = pack_gcodes(counties, 6, 8, 0.25)
+    bins = pack_gcodes(counties, 6, 8, 0.25, seed)
     for i, g in enumerate(bins):
         g = HEADER + g + FOOTER
         g.save('pass1/bin%02d.nc' % i)
+        surface = g.render(0, 0, 6, 8, 96)
+        surface.write_to_png('bins/%02d.png' % i)
 
     counties = generate_counties(shapes, False)
-    bins = pack_gcodes(counties, 6, 8, 0.25)
+    bins = pack_gcodes(counties, 6, 8, 0.25, seed)
     for i, g in enumerate(bins):
         g = g.depth(G0Z, G1Z_THRU)
         g = HEADER + g + FOOTER
         g.save('pass2/bin%02d.nc' % i)
-
-    # surface = g.render(0, 0, 6, 8, 96)
-    # surface.write_to_png('bins/%02d.png' % i)
