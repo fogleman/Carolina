@@ -64,6 +64,30 @@ def best_scale(width, height):
     print result
     return result
 
+def fit_text(polygon, x, y, w, h):
+    result = scale = 0.1
+    while True:
+        x1 = x - w * scale / 2
+        y1 = y - h * scale / 2
+        x2 = x + w * scale / 2
+        y2 = y + h * scale / 2
+        box = Polygon([(x1, y1), (x2, y1), (x2, y2), (x1, y2), (x1, y1)])
+        if not polygon.contains(box):
+            return result
+        result = scale
+        scale += 0.1
+
+def position_text(polygon, w, h, n):
+    items = []
+    minx, miny, maxx, maxy = polygon.bounds
+    for i in range(n):
+        for j in range(n):
+            x = minx + (maxx - minx) * (float(i) / (n - 1))
+            y = miny + (maxy - miny) * (float(j) / (n - 1))
+            s = fit_text(polygon, x, y, w, h)
+            items.append((s, x, y))
+    return max(items)
+
 def generate_text(name, x, y):
     g = GCode.from_file('text/%s.nc' % name)
     g = g.depth(G0Z, G1Z_TEXT)
