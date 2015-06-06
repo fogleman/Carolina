@@ -9,11 +9,12 @@ import shapefile
 SHAPEFILE = 'shapefiles/cb_2013_us_county_5m/cb_2013_us_county_5m.shp'
 SCALE = 525
 
-F = 20
+F = 45
 G0Z = 0.2
-G1Z_BEVEL = -0.125/2
-G1Z_TEXT = -0.025
-G1Z_THRU = -0.55
+G1Z_BEVEL = -0.125
+G1Z_TEXT = -0.05
+G1Z_THRU1 = -0.4
+G1Z_THRU2 = -0.65
 
 HEADER = GCode(['G90', 'G20', 'G0 Z%s' % G0Z, 'M4', 'G4 P2.0', 'F%s' % F])
 FOOTER = GCode(['G0 Z%s' % G0Z, 'M8'])
@@ -187,6 +188,7 @@ if __name__ == '__main__':
     counties = generate_counties(shapes, False)
     bins = pack_gcodes(counties, 6, 8, 0.25, seed)
     for i, g in enumerate(bins):
-        g = g.depth(G0Z, G1Z_THRU)
-        g = HEADER + g + FOOTER
+        g1 = g.depth(G0Z, G1Z_THRU1)
+        g2 = g.depth(G0Z, G1Z_THRU2)
+        g = HEADER + g1 + g2 + FOOTER
         g.save('pass2/bin%02d.nc' % i)
