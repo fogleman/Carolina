@@ -97,6 +97,10 @@ class GCode(object):
         w, h = self.size
         return w * h
 
+    def save(self, path):
+        with open(path, 'w') as fp:
+            fp.write(self.code)
+
     def origin(self):
         return self.move(0, 0, 0, 0)
 

@@ -7,13 +7,13 @@ from shapely.affinity import translate
 import shapefile
 
 SHAPEFILE = 'shapefiles/cb_2013_us_county_5m/cb_2013_us_county_5m.shp'
-# SCALE = 400
 SCALE = 525
 
 F = 20
 G0Z = 0.2
-G1Z = -0.125/2
+G1Z_BEVEL = -0.125/2
 G1Z_TEXT = -0.025
+G1Z_THRU = -0.55
 
 HEADER = GCode(['G90', 'G20', 'G0 Z%s' % G0Z, 'M4', 'G4 P2.0', 'F%s' % F])
 FOOTER = GCode(['G0 Z%s' % G0Z, 'M8'])
@@ -142,13 +142,13 @@ def generate_text(name, x, y, scale, angle):
     g = g.move(x, y, 0.5, 0.5)
     return g
 
-def generate_county(shapes, name):
+def generate_county(shapes, name, text):
     result = []
     polygons = get_polygons(shapes[name], SCALE)
     max_polygon = max(polygons, key=attrgetter('area'))
     for i, polygon in enumerate(polygons):
-        g = GCode.from_polygon(polygon, G0Z, G1Z)
-        if polygon == max_polygon:
+        g = GCode.from_polygon(polygon, G0Z, G1Z_BEVEL)
+        if text and polygon == max_polygon:
             x, y = polygon.centroid.coords[0]
             dx, dy = TEXT_OFFSETS.get(name, (0, 0))
             scale = TEXT_SIZES.get(name, TEXT_SIZE)
@@ -157,13 +157,12 @@ def generate_county(shapes, name):
         g = g.origin()
         g.name = ('%s %d' % (name, i)) if i else name
         result.append(g)
-    # g = HEADER + g + FOOTER
     return result
 
-def generate_counties(shapes):
+def generate_counties(shapes, text):
     result = []
     for name, shape in shapes.items():
-        result.extend(generate_county(shapes, name))
+        result.extend(generate_county(shapes, name, text))
     return result
 
 def render_counties(counties):
@@ -175,23 +174,19 @@ def render_counties(counties):
 
 if __name__ == '__main__':
     shapes = load_county_shapes('37')
-    counties = generate_counties(shapes)
-    render_counties(counties)
 
-    # bins = pack_gcodes(counties, 60, 40, 0.25, 1450999150)
-    # for i, g in enumerate(bins):
-    #     surface = g.render(0, 0, 60, 40, 96)
-    #     surface.write_to_png('bins/%02d.png' % i)
+    counties = generate_counties(shapes, True)
+    bins = pack_gcodes(counties, 6, 8, 0.25)
+    for i, g in enumerate(bins):
+        g = HEADER + g + FOOTER
+        g.save('pass1/bin%02d.nc' % i)
 
-    # counties = generate_counties(shapes)
-    # print counties
-    # best_scale(6, 8)
-    # result = GCode()
-    # x = 0
-    # for county in COUNTIES[:10]:
-    #     g = generate_county(county.name)
-    #     g = g.translate(x, 0)
-    #     x += g.width + 0.5
-    #     result += g
-    # print result
-    # print generate_county(shapes, 'Wake')
+    counties = generate_counties(shapes, False)
+    bins = pack_gcodes(counties, 6, 8, 0.25)
+    for i, g in enumerate(bins):
+        g = g.depth(G0Z, G1Z_THRU)
+        g = HEADER + g + FOOTER
+        g.save('pass2/bin%02d.nc' % i)
+
+    # surface = g.render(0, 0, 6, 8, 96)
+    # surface.write_to_png('bins/%02d.png' % i)
