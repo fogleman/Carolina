@@ -52,7 +52,7 @@ class Bin(object):
     def layout(self):
         return try_pack(self.width, self.height, self.items)
 
-def pack_bins(width, height, sizes, seed=None):
+def pack(width, height, sizes, seed=None):
     bins = []
     items = list(enumerate(sizes))
     if seed is not None:
@@ -74,6 +74,6 @@ def best_seed(width, height, sizes, iterations):
     for i in xrange(iterations):
         print i, iterations
         seed = int(random.getrandbits(31))
-        result = pack_bins(width, height, sizes, seed)
+        result = pack(width, height, sizes, seed)
         best = min(best, (len(result), seed))
     return best[1]

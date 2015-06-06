@@ -1,11 +1,32 @@
 from collections import namedtuple
 from math import radians, sin, cos, hypot, atan2
+from operator import attrgetter
+from pack import pack
 import cairo
 
 DECIMALS = 6
 
 Bounds = namedtuple('Bounds', ['x1', 'y1', 'x2', 'y2'])
 Size = namedtuple('Size', ['width', 'height'])
+
+def pack_gcodes(gcodes, width, height, padding, seed=None):
+    # gcodes = [min([g.rotate(a).origin() for a in range(0, 180, 5)],
+    #     key=attrgetter('height')) for g in gcodes]
+    result = []
+    sizes = [g.size for g in gcodes]
+    sizes = [(w + padding * 2, h + padding * 2) for w, h in sizes]
+    bins = pack(width, height, sizes, seed)
+    for b in bins:
+        bg = GCode()
+        for item in b:
+            index, rotated, (x, y, _, _) = item
+            g = gcodes[index]
+            if rotated:
+                g = g.rotate(-90).origin()
+            g = g.translate(x + padding, y + padding)
+            bg += g
+        result.append(bg)
+    return result
 
 class GCode(object):
 

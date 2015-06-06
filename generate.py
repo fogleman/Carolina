@@ -1,23 +1,69 @@
 from counties import COUNTIES
-from gcode import GCode
+from gcode import GCode, pack_gcodes
 from math import radians, asinh, tan, sin, cos
 from operator import attrgetter
 from shapely.geometry import Polygon
 from shapely.affinity import translate
-import pack
 import shapefile
 
 SHAPEFILE = 'shapefiles/cb_2013_us_county_5m/cb_2013_us_county_5m.shp'
 # SCALE = 400
 SCALE = 525
 
-F = 50
+F = 20
 G0Z = 0.2
 G1Z = -0.125/2
 G1Z_TEXT = -0.025
 
 HEADER = GCode(['G90', 'G20', 'G0 Z%s' % G0Z, 'M4', 'G4 P2.0', 'F%s' % F])
 FOOTER = GCode(['G0 Z%s' % G0Z, 'M8'])
+
+TEXT_SIZE = 0.375
+
+TEXT_SIZES = {
+    'Transylvania': 0.3,
+}
+
+TEXT_OFFSETS = {
+    'Alleghany': (0, 0.125),
+    'Beaufort': (0, 1),
+    'Cabarrus': (0, 0.25),
+    'Camden': (-0.5, 0.625),
+    'Carteret': (-1.5, -0.75),
+    'Cherokee': (-0.25, 0),
+    'Chowan': (-0.25, 0),
+    'Cleveland': (0, -0.25),
+    'Currituck': (-0.75, 0.5),
+    'Cumberland': (-0.375, 0),
+    'Davidson': (-0.125, 0),
+    'Durham': (0.25, -0.5),
+    'Edgecombe': (0.125, 0),
+    'Henderson': (0, 0.375),
+    'Hertford': (0, -0.25),
+    'Jackson': (0, 0.25),
+    'Lenoir': (-0.25, 0),
+    'Mitchell': (0, 0.25),
+    'Mecklenburg': (0.25, -0.5),
+    'Martin': (0, -0.25),
+    'Montgomery': (0, -0.75),
+    'New Hanover': (0.25, 0),
+    'Northampton': (0.375, 0.375),
+    'Perquimans': (0.15, 0.45),
+    'Richmond': (0.25, 0.25),
+    'Rutherford': (0, 0.25),
+    'Scotland': (-0.075, 0),
+    'Transylvania': (0.25, 0),
+}
+
+TEXT_ANGLES = {
+    'Camden': -45,
+    'Chowan': -90,
+    'Currituck': -45,
+    'Mitchell': -45,
+    'New Hanover': 60,
+    'Pasquotank': -45,
+    'Perquimans': -45,
+}
 
 def mercator(lat, lng, scale):
     x = radians(lng) * scale
@@ -88,59 +134,55 @@ def position_text(polygon, w, h, n):
             items.append((s, x, y))
     return max(items)
 
-def generate_text(name, x, y):
+def generate_text(name, x, y, scale, angle):
     g = GCode.from_file('text/%s.nc' % name)
     g = g.depth(G0Z, G1Z_TEXT)
-    g = g.scale(0.35, 0.35)
-    g = g.translate(x - g.width / 2, y - g.height / 2)
+    g = g.scale(scale, scale)
+    g = g.rotate(angle)
+    g = g.move(x, y, 0.5, 0.5)
     return g
 
 def generate_county(shapes, name):
-    g = GCode()
-    shape = shapes[name]
-    polygons = get_polygons(shape, SCALE)
-    for polygon in polygons:
-        g += GCode.from_polygon(polygon, G0Z, G1Z)
-    polygon = max(polygons, key=attrgetter('area'))
-    x, y = polygon.centroid.coords[0]
-    g += generate_text(name, x, y)
-    g = min([g.rotate(a) for a in range(0, 180, 5)], key=attrgetter('height'))
-    g = g.origin()
-    g = HEADER + g + FOOTER
-    return g
+    result = []
+    polygons = get_polygons(shapes[name], SCALE)
+    max_polygon = max(polygons, key=attrgetter('area'))
+    for i, polygon in enumerate(polygons):
+        g = GCode.from_polygon(polygon, G0Z, G1Z)
+        if polygon == max_polygon:
+            x, y = polygon.centroid.coords[0]
+            dx, dy = TEXT_OFFSETS.get(name, (0, 0))
+            scale = TEXT_SIZES.get(name, TEXT_SIZE)
+            angle = TEXT_ANGLES.get(name, 0)
+            g += generate_text(name, x + dx, y + dy, scale, angle)
+        g = g.origin()
+        g.name = ('%s %d' % (name, i)) if i else name
+        result.append(g)
+    # g = HEADER + g + FOOTER
+    return result
 
 def generate_counties(shapes):
-    result = {}
+    result = []
     for name, shape in shapes.items():
-        result[name] = generate_county(shapes, name)
+        result.extend(generate_county(shapes, name))
     return result
 
-def pack_counties(counties, padding):
-    result = []
-    counties = counties.values()
-    sizes = [county.size for county in counties]
-    sizes = [(w + padding * 2, h + padding * 2) for w, h in sizes]
-    seed = 1450999150
-    bins = pack.pack_bins(6, 8, sizes, seed)
-    for b in bins:
-        bg = GCode()
-        for item in b:
-            index, rotated, (x, y, _, _) = item
-            g = counties[index]
-            if rotated:
-                g = g.rotate(-90).origin()
-            g = g.translate(x + padding, y + padding)
-            bg += g
-        result.append(bg)
-    return result
+def render_counties(counties):
+    for g in counties:
+        name = g.name
+        g = g.move(5, 5, 0.5, 0.5)
+        surface = g.render(0, 0, 10, 10, 96)
+        surface.write_to_png('pngs/%s.png' % name)
 
 if __name__ == '__main__':
     shapes = load_county_shapes('37')
     counties = generate_counties(shapes)
-    bins = pack_counties(counties, 0.25)
-    for i, g in enumerate(bins):
-        surface = g.render(0, 0, 6, 8, 96)
-        surface.write_to_png('bins/%02d.png' % i)
+    render_counties(counties)
+
+    # bins = pack_gcodes(counties, 60, 40, 0.25, 1450999150)
+    # for i, g in enumerate(bins):
+    #     surface = g.render(0, 0, 60, 40, 96)
+    #     surface.write_to_png('bins/%02d.png' % i)
+
     # counties = generate_counties(shapes)
     # print counties
     # best_scale(6, 8)
