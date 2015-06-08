@@ -10,8 +10,7 @@ Bounds = namedtuple('Bounds', ['x1', 'y1', 'x2', 'y2'])
 Size = namedtuple('Size', ['width', 'height'])
 
 def pack_gcodes(gcodes, width, height, padding, seed=None):
-    # gcodes = [min([g.rotate(a).origin() for a in range(0, 180, 5)],
-    #     key=attrgetter('height')) for g in gcodes]
+    gcodes = filter(None, [g.rotate_to_fit(width, height) for g in gcodes])
     result = []
     sizes = [g.size for g in gcodes]
     sizes = [(w + padding * 2, h + padding * 2) for w, h in sizes]
@@ -169,6 +168,28 @@ class GCode(object):
                     token = 'I' + str(ri)
                 elif token[0] == 'J':
                     token = 'J' + str(rj)
+                tokens.append(token)
+            lines.append(' '.join(tokens))
+        return GCode(lines)
+
+    def rotate_to_fit(self, width, height):
+        for a in range(0, 180, 5):
+            g = self.rotate(a).origin()
+            if g.width <= width and g.height <= height:
+                return g
+        return None
+
+    def clamp(self, minx, miny, maxx, maxy):
+        lines = []
+        for line in self.lines:
+            tokens = []
+            for token in line.split():
+                if token[0] == 'X':
+                    token = 'X' + str(max(float(token[1:]), minx))
+                    token = 'X' + str(min(float(token[1:]), maxx))
+                elif token[0] == 'Y':
+                    token = 'Y' + str(max(float(token[1:]), miny))
+                    token = 'Y' + str(min(float(token[1:]), maxy))
                 tokens.append(token)
             lines.append(' '.join(tokens))
         return GCode(lines)

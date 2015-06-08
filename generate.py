@@ -177,8 +177,21 @@ if __name__ == '__main__':
     seed = 44654645
     shapes = load_county_shapes('37')
 
+    big = [
+        'Northampton', 'Halifax', 'Pitt', 'Beaufort', 'Craven', 'Carteret',
+        'Wake', 'Johnston', 'Sampson', 'Robeson', 'Columbus', 'Brunswick',
+    ]
+    shapes = [(k, v) for k, v in shapes if k in big]
+
     counties = generate_counties(shapes, True)
-    bins = pack_gcodes(counties, 6, 8, 0.25, seed)
+
+    for i, g in enumerate(counties):
+        if g.name == 'Carteret':
+            g = g.rotate(35).origin()
+            g = g.clamp(0, 0, 6, 8)
+            counties[i] = g
+
+    bins = pack_gcodes(counties, 6, 8, 0.0, seed)
     for i, g in enumerate(bins):
         g = HEADER + g + FOOTER
         g.save('pass1/bin%02d.nc' % i)
@@ -186,7 +199,14 @@ if __name__ == '__main__':
         surface.write_to_png('bins/%02d.png' % i)
 
     counties = generate_counties(shapes, False)
-    bins = pack_gcodes(counties, 6, 8, 0.25, seed)
+
+    for i, g in enumerate(counties):
+        if g.name == 'Carteret':
+            g = g.rotate(35).origin()
+            g = g.clamp(0, 0, 6, 8)
+            counties[i] = g
+
+    bins = pack_gcodes(counties, 6, 8, 0.0, seed)
     for i, g in enumerate(bins):
         g1 = g.depth(G0Z, G1Z_THRU1)
         g2 = g.depth(G0Z, G1Z_THRU2)
