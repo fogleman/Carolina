@@ -76,11 +76,21 @@ class Graph(object):
         return result
 
 if __name__ == '__main__':
+    from collections import Counter
     graph = create_graph()
-    colors = graph.color(4)
-    for name, names in graph.edges.items():
-        for other in names:
-            if colors[name] == colors[other]:
-                raise Exception('invalid coloring!')
-    for name in sorted(colors):
-        print name, colors[name]
+    n = 4
+    while True:
+        colors = graph.color(n)
+        for name, names in graph.edges.items():
+            for other in names:
+                if colors[name] == colors[other]:
+                    raise Exception('invalid coloring!')
+        c = Counter(colors.values()).most_common()
+        if c[-1][1] != 100 / n:
+            continue
+        for color in range(n):
+            for name in sorted(colors):
+                if colors[name] == color:
+                    print color, name
+        print c
+        break
