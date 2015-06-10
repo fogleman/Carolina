@@ -17,7 +17,7 @@ G1Z_THRU1 = -0.4
 G1Z_THRU2 = -0.65
 
 HEADER = GCode(['G90', 'G20', 'G0 Z%s' % G0Z, 'M4', 'G4 P2.0', 'F%s' % F])
-FOOTER = GCode(['G0 Z%s' % G0Z, 'M8'])
+FOOTER = GCode(['G0 Z%s' % G0Z, 'M8', 'G0 X3 Y6'])
 
 TEXT_SIZE = 0.375
 
