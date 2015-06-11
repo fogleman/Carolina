@@ -2,6 +2,7 @@ from collections import namedtuple
 from math import radians, sin, cos, hypot, atan2
 from operator import attrgetter
 from pack import pack
+from shapely.geometry import Polygon, MultiPolygon, LineString, MultiLineString
 import cairo
 
 DECIMALS = 6
@@ -35,9 +36,8 @@ class GCode(object):
             return GCode(fp.read())
 
     @staticmethod
-    def from_polygon(polygon, g0z, g1z):
+    def from_points(points, g0z, g1z):
         lines = []
-        points = list(polygon.exterior.coords)
         lines.append('G0 Z%f' % g0z)
         lines.append('G0 X%f Y%f' % points[0])
         lines.append('G1 Z%f' % g1z)
@@ -45,6 +45,22 @@ class GCode(object):
             lines.append('G1 X%f Y%f' % point)
         lines.append('G0 Z%f' % g0z)
         return GCode(lines)
+
+    @staticmethod
+    def from_geometry(geometry, g0z, g1z):
+        t = type(geometry)
+        if t == Polygon:
+            points = list(geometry.exterior.coords)
+            return GCode.from_points(points, g0z, g1z)
+        if t == LineString:
+            points = list(geometry.coords)
+            return GCode.from_points(points, g0z, g1z)
+        if t in (MultiPolygon, MultiLineString):
+            g = GCode()
+            for x in geometry:
+                g += GCode.from_geometry(x, g0z, g1z)
+            return g
+        raise Exception('unrecognized geometry type')
 
     def __init__(self, code=None):
         if code is None:
