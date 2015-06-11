@@ -99,7 +99,7 @@ def best_scale(width, height):
         polygons = get_polygons(shape, 1)
         for polygon in polygons:
             sizes = []
-            g = GCode.from_polygon(polygon, 0, 0)
+            g = GCode.from_geometry(polygon, 0, 0)
             for angle in range(0, 180, 5):
                 w, h = g.rotate(angle).size
                 size = min(width / w, height / h)
@@ -148,7 +148,7 @@ def generate_county(shape, name, text):
     polygons = get_polygons(shape, SCALE)
     max_polygon = max(polygons, key=attrgetter('area'))
     for i, polygon in enumerate(polygons):
-        g = GCode.from_polygon(polygon, G0Z, G1Z_BEVEL)
+        g = GCode.from_geometry(polygon, G0Z, G1Z_BEVEL)
         if text and polygon == max_polygon:
             x, y = polygon.centroid.coords[0]
             dx, dy = TEXT_OFFSETS.get(name, (0, 0))

@@ -58,7 +58,8 @@ def main():
             for shape in shapes:
                 g += GCode.from_geometry(shape, 0.2, -0.05)
             g = g.translate(-tile.bounds[0], -tile.bounds[1])
-            surface = g.render(0, 0, 6, 8, 96)
+            p = 0.1
+            surface = g.render(0 - p, 0 - p, 6 + p, 8 + p, 96)
             surface.write_to_png('tiles/%02d.%02d.png' % (y, x))
 
 if __name__ == '__main__':

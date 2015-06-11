@@ -232,6 +232,7 @@ class GCode(object):
         dc.paint()
         dc.scale(scale, -scale)
         dc.translate(0, y1 - y2)
+        dc.translate(-x1, -y1)
         dc.set_line_cap(cairo.LINE_CAP_ROUND)
         dc.set_line_join(cairo.LINE_JOIN_ROUND)
         dc.set_source_rgb(1, 1, 1)
