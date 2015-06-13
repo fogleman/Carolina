@@ -1,10 +1,12 @@
 from gcode import GCode
 from math import radians, asinh, tan
-from shapely.geometry import Polygon, LineString
+from shapely.geometry import Polygon, LineString, MultiPolygon
 from shapely.affinity import translate
 import shapefile
 
-SHAPEFILE = 'shapefiles/cb_2013_us_county_5m/cb_2013_us_county_5m.shp'
+COUNTY_SHAPEFILE = 'shapefiles/cb_2013_us_county_5m/cb_2013_us_county_5m.shp'
+STATE_SHAPEFILE = 'shapefiles/cb_2014_us_state_5m/cb_2014_us_state_5m.shp'
+
 SCALE = 525
 X = -772.6394788798026
 Y = 329.90359819959644
@@ -28,13 +30,40 @@ def get_shapes(shape, tile):
             result.append(p)
     return result
 
+def get_state_shapes(shape, tile):
+    result = []
+    parts = list(shape.parts) + [len(shape.points)]
+    for i1, i2 in zip(parts, parts[1:]):
+        points = [mercator(y, x) for x, y in shape.points[i1:i2]]
+        mp = Polygon(points).buffer(-0.25)
+        if mp.is_empty:
+            continue
+        if isinstance(mp, Polygon):
+            polygons = [mp]
+        else:
+            polygons = mp
+        for polygon in polygons:
+            line = LineString(list(polygon.exterior.coords)).intersection(tile)
+            if not line.is_empty:
+                result.append(line)
+    return result
+
 def load_counties(statefp, tile):
     result = []
-    sf = shapefile.Reader(SHAPEFILE)
+    sf = shapefile.Reader(COUNTY_SHAPEFILE)
     for item in sf.shapeRecords():
         if item.record[0] != statefp:
             continue
         result.extend(get_shapes(item.shape, tile))
+    return result
+
+def load_state(statefp, tile):
+    result = []
+    sf = shapefile.Reader(STATE_SHAPEFILE)
+    for item in sf.shapeRecords():
+        if item.record[0] != statefp:
+            continue
+        result.extend(get_state_shapes(item.shape, tile))
     return result
 
 def tile_polygon(i, j):
@@ -50,13 +79,16 @@ def main():
     for y in range(4):
         for x in range(14):
             tile = tile_polygon(x, y)
-            shapes = load_counties('37', tile)
-            if not shapes:
+            county_shapes = load_counties('37', tile)
+            state_shapes = load_state('37', tile)
+            if not county_shapes and not state_shapes:
                 continue
-            print x, y, len(shapes)
+            print x, y, len(county_shapes), len(state_shapes)
             g = GCode()
-            for shape in shapes:
+            for shape in county_shapes:
                 g += GCode.from_geometry(shape, 0.2, -0.05)
+            for shape in state_shapes:
+                g += GCode.from_geometry(shape, 0.2, -0.1)
             g = g.translate(-tile.bounds[0], -tile.bounds[1])
             p = 0.1
             surface = g.render(0 - p, 0 - p, 6 + p, 8 + p, 96)
