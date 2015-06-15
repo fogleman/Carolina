@@ -11,6 +11,15 @@ SCALE = 525
 X = -772.6394788798026
 Y = 329.90359819959644
 
+F = 60
+G0Z = 0.2
+G1Z_COUNTY = -1/16.0
+G1Z_STATE1 = -0.3
+G1Z_STATE2 = -0.6
+
+HEADER = GCode(['G90', 'G20', 'G0 Z%s' % G0Z, 'M4', 'G4 P2.0', 'F%s' % F])
+FOOTER = GCode(['G0 Z%s' % G0Z, 'M8', 'G0 X3 Y6'])
+
 # 81.21 x 30.78 inches
 # 6.77 x 2.56 feet
 # 14 x 4 tiles
@@ -68,7 +77,6 @@ def load_state(statefp, tile):
 
 def tile_polygon(i, j):
     w, h = 6, 8
-    w, h = 6, 8
     minx = i * w
     miny = j * h
     maxx = minx + w
@@ -86,10 +94,14 @@ def main():
             print x, y, len(county_shapes), len(state_shapes)
             g = GCode()
             for shape in county_shapes:
-                g += GCode.from_geometry(shape, 0.2, -0.05)
+                g += GCode.from_geometry(shape, G0Z, G1Z_COUNTY)
             for shape in state_shapes:
-                g += GCode.from_geometry(shape, 0.2, -0.1)
+                g += GCode.from_geometry(shape, G0Z, G1Z_STATE1)
+            for shape in state_shapes:
+                g += GCode.from_geometry(shape, G0Z, G1Z_STATE2)
             g = g.translate(-tile.bounds[0], -tile.bounds[1])
+            g = HEADER + g + FOOTER
+            g.save('tiles/%02d.%02d.nc' % (y, x))
             p = 0.1
             surface = g.render(0 - p, 0 - p, 6 + p, 8 + p, 96)
             surface.write_to_png('tiles/%02d.%02d.png' % (y, x))
