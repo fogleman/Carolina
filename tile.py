@@ -1,6 +1,7 @@
 from gcode import GCode
+from itertools import groupby
 from math import radians, asinh, tan
-from shapely.geometry import Polygon, LineString, MultiPolygon
+from shapely.geometry import Polygon, LineString, MultiLineString
 from shapely.affinity import translate
 import shapefile
 
@@ -59,7 +60,35 @@ def intersection(shapes, tile, offset=None):
         for polygon in shape:
             line = LineString(list(polygon.exterior.coords)).intersection(tile)
             if not line.is_empty:
-                result.append(line)
+                line = line.simplify(0.01)
+                if isinstance(line, MultiLineString):
+                    result.extend(list(line.geoms))
+                else:
+                    result.append(line)
+    result = simplify(result)
+    return result
+
+def simplify(lines):
+    result = []
+    seen = set()
+    for line in lines:
+        line = list(line.coords)
+        edges = []
+        for a, b in zip(line, line[1:]):
+            edge = (a, b)
+            repeat = edge in seen
+            edges.append((edge, repeat))
+            seen.add((a, b))
+            seen.add((b, a))
+        for repeat, group in groupby(edges, key=lambda x: x[1]):
+            group = list(group)
+            points = [group[0][0][0]]
+            for item in group:
+                points.append(item[0][1])
+            segment = LineString(points)
+            if repeat and segment.length >= 1:
+                continue
+            result.append(segment)
     return result
 
 def create_tile(i, j, w, h):
