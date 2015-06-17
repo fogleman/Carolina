@@ -13,7 +13,7 @@ Y = 329.90359819959644
 
 F = 60
 G0Z = 0.2
-G1Z_COUNTY = -1/16.0
+G1Z_COUNTY = -1 / 8.0
 G1Z_STATE1 = -0.3
 G1Z_STATE2 = -0.6
 
@@ -29,66 +29,52 @@ def mercator(lat, lng):
     y = asinh(tan(radians(lat))) * SCALE - Y
     return (x, y)
 
-def get_shapes(shape, tile):
+def shapes_to_polygons(shapes):
     result = []
-    parts = list(shape.parts) + [len(shape.points)]
-    for i1, i2 in zip(parts, parts[1:]):
-        points = [mercator(y, x) for x, y in shape.points[i1:i2]]
-        p = LineString(points).intersection(tile)
-        if not p.is_empty:
-            result.append(p)
+    for shape in shapes:
+        parts = list(shape.parts) + [len(shape.points)]
+        for i1, i2 in zip(parts, parts[1:]):
+            points = [mercator(y, x) for x, y in shape.points[i1:i2]]
+            result.append(Polygon(points))
     return result
 
-def get_state_shapes(shape, tile):
+def load_polygons(path):
     result = []
-    parts = list(shape.parts) + [len(shape.points)]
-    for i1, i2 in zip(parts, parts[1:]):
-        points = [mercator(y, x) for x, y in shape.points[i1:i2]]
-        mp = Polygon(points).buffer(-0.25)
-        if mp.is_empty:
+    sf = shapefile.Reader(path)
+    for item in sf.shapeRecords():
+        if item.record[0] != '37':
             continue
-        if isinstance(mp, Polygon):
-            polygons = [mp]
-        else:
-            polygons = mp
-        for polygon in polygons:
+        result.append(item.shape)
+    return shapes_to_polygons(result)
+
+def intersection(shapes, tile, offset=None):
+    result = []
+    for shape in shapes:
+        if offset:
+            shape = shape.buffer(offset)
+        if shape.is_empty:
+            continue
+        if isinstance(shape, Polygon):
+            shape = [shape]
+        for polygon in shape:
             line = LineString(list(polygon.exterior.coords)).intersection(tile)
             if not line.is_empty:
                 result.append(line)
     return result
 
-def load_counties(statefp, tile):
-    result = []
-    sf = shapefile.Reader(COUNTY_SHAPEFILE)
-    for item in sf.shapeRecords():
-        if item.record[0] != statefp:
-            continue
-        result.extend(get_shapes(item.shape, tile))
-    return result
-
-def load_state(statefp, tile):
-    result = []
-    sf = shapefile.Reader(STATE_SHAPEFILE)
-    for item in sf.shapeRecords():
-        if item.record[0] != statefp:
-            continue
-        result.extend(get_state_shapes(item.shape, tile))
-    return result
-
-def tile_polygon(i, j):
-    w, h = 6, 8
-    minx = i * w
-    miny = j * h
-    maxx = minx + w
-    maxy = miny + h
+def create_tile(i, j, w, h):
+    minx, miny = i * w, j * h
+    maxx, maxy = minx + w, miny + h
     return Polygon([(minx, miny), (maxx, miny), (maxx, maxy), (minx, maxy)])
 
 def main():
+    counties = load_polygons(COUNTY_SHAPEFILE)
+    state = load_polygons(STATE_SHAPEFILE)
     for y in range(4):
         for x in range(14):
-            tile = tile_polygon(x, y)
-            county_shapes = load_counties('37', tile)
-            state_shapes = load_state('37', tile)
+            tile = create_tile(x, y, 6, 8)
+            county_shapes = intersection(counties, tile)
+            state_shapes = intersection(state, tile, -0.25)
             if not county_shapes and not state_shapes:
                 continue
             print x, y, len(county_shapes), len(state_shapes)
