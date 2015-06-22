@@ -62,6 +62,22 @@ class GCode(object):
             return g
         raise Exception('unrecognized geometry type')
 
+    @staticmethod
+    def from_shape(shape, g0z, g1z):
+        g = GCode()
+        parts = list(shape.parts) + [len(shape.points)]
+        for i1, i2 in zip(parts, parts[1:]):
+            points = map(tuple, shape.points[i1:i2])
+            g += GCode.from_points(points, g0z, g1z)
+        return g
+
+    @staticmethod
+    def from_shapes(shapes, g0z, g1z):
+        g = GCode()
+        for shape in shapes:
+            g += GCode.from_shape(shape, g0z, g1z)
+        return g
+
     def __init__(self, code=None):
         if code is None:
             self.code = ''
@@ -194,6 +210,24 @@ class GCode(object):
             if g.width <= width and g.height <= height:
                 return g
         return None
+
+    def scale_to_fit(self, width, height, padding=0):
+        width -= padding * 2
+        height -= padding * 2
+        s = min(width / self.width, height / self.height)
+        return self.scale(s, s).origin()
+
+    def rotate_and_scale_to_fit(self, width, height, padding=0):
+        gs = []
+        width -= padding * 2
+        height -= padding * 2
+        for a in range(0, 180, 5):
+            g = self.rotate(a)
+            s = min(width / g.width, height / g.height)
+            g = g.scale(s, s).origin()
+            gs.append((s, g))
+        g = max(gs, key=lambda x: x[0])[1]
+        return g
 
     def clamp(self, minx, miny, maxx, maxy):
         lines = []
