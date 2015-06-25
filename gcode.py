@@ -257,6 +257,35 @@ class GCode(object):
             lines.append(' '.join(tokens))
         return GCode(lines)
 
+    def crop(self, x1, y1, x2, y2):
+        def inside(x, y):
+            return x >= x1 and y >= y1 and x <= x2 and y <= y2
+        lines = []
+        x = y = z = 0
+        for line in self.lines:
+            tokens = line.split()
+            if not tokens:
+                continue
+            px, py, pz = x, y, z
+            for token in tokens:
+                if token[0] == 'X':
+                    x = float(token[1:])
+                elif token[0] == 'Y':
+                    y = float(token[1:])
+                elif token[0] == 'Z':
+                    z = float(token[1:])
+            in1 = inside(px, py)
+            in2 = inside(x, y)
+            if in1 and in2:
+                lines.append(line)
+            elif in1 and not in2:
+                pass
+            elif not in1 and in2:
+                pass
+            else:
+                pass
+        return GCode(lines)
+
     def render(self, x1, y1, x2, y2, scale):
         width = int(round((x2 - x1) * scale))
         height = int(round((y2 - y1) * scale))
