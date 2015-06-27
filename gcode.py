@@ -63,6 +63,13 @@ class GCode(object):
         raise Exception('unrecognized geometry type')
 
     @staticmethod
+    def from_geometries(geometries, g0z, g1z):
+        g = GCode()
+        for geometry in geometries:
+            g += GCode.from_geometry(geometry, g0z, g1z)
+        return g
+
+    @staticmethod
     def from_shape(shape, g0z, g1z):
         g = GCode()
         parts = list(shape.parts) + [len(shape.points)]
