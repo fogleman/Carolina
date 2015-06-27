@@ -68,21 +68,25 @@ def intersection(mp, tile, offset=None):
     return MultiLineString(result)
 
 def main():
+    # 8x3
     i, j = 5, 1
     tw, th = 6, 8
-    w, h = 48, 24
-    p = 2
+    w, h = 48-2, 24-2
+    p = 0
     shapes = load_shapes()
     mp = MultiPolygon(shapes)
     mp = fit_shape(mp, w, h, p)
-    tile = create_tile(i, j, tw, th)
-    mp = intersection(mp, tile)
-    g = GCode.from_geometry(mp, G0Z, G1Z)
-    g = g.translate(-i * tw, -j * th)
-    g = HEADER + g + FOOTER
-    im = g.render(0, 0, tw, th, 96)
-    im.write_to_png('usa.png')
-    print g
+    for i in range(7):
+        for j in range(3):
+            print i, j
+            tile = create_tile(i, j, tw, th)
+            tmp = intersection(mp, tile)
+            g = GCode.from_geometry(tmp, G0Z, G1Z)
+            g = g.translate(-i * tw, -j * th)
+            g = HEADER + g + FOOTER
+            im = g.render(0, 0, tw, th, 96)
+            im.write_to_png('usa-tiles/%d.%d.png' % (j, i))
+            g.save('usa-tiles/%d.%d.nc' % (j, i))
 
 if __name__ == '__main__':
     main()
