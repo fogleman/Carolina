@@ -120,6 +120,9 @@ def main():
     shapes.append(circle())
     mp = MultiLineString(shapes)
     mp = fit_shape(mp, w, h, p)
+    g = GCode.from_geometry(mp, G0Z, G1Z)
+    im = g.render(0, 0, w, h, 96)
+    im.write_to_png('hemi.png')
     for i in range(4):
         for j in range(3):
             print i, j
