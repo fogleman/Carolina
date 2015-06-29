@@ -8,7 +8,7 @@ SHAPEFILE = 'shapefiles/ne_110m_land/ne_110m_land.shp'
 
 F = 60
 G0Z = 0.2
-G1Z = -1 / 8.0 / 4
+G1Z = -1 / 8.0 / 8
 
 HEADER = GCode(['G90', 'G20', 'G0 Z%s' % G0Z, 'M4', 'G4 P2.0', 'F%s' % F])
 FOOTER = GCode(['G0 Z%s' % G0Z, 'M8', 'G0 X3 Y6'])
@@ -21,18 +21,18 @@ def laea(pt):
     ok = lng > -180+p and lng < 180-p
     lng, lat = radians(lng), radians(lat)
     clat = radians(0)
-    clng = radians(-110)
+    clng = radians(-110+180)
     k = (2 / (1 + sin(clat) * sin(lat) + cos(clat) * cos(lat) * cos(lng - clng))) ** 0.5
     x = k * cos(lat) * sin(lng - clng)
     y = k * (cos(clat) * sin(lat) - sin(clat) * cos(lat) * cos(lng - clng))
     return (x, y, ok)
 
-def circle():
+def circle(r):
     points = []
     for i in range(361):
         a = radians(i)
-        x = cos(a) * R
-        y = sin(a) * R
+        x = cos(a) * r
+        y = sin(a) * r
         points.append((x, y))
     return LineString(points)
 
@@ -102,22 +102,12 @@ def intersection(mp, tile):
     return MultiLineString(result)
 
 def main():
-    w, h = 24, 24
-    p = 1
-    shapes = load_shapes()
-    shapes.append(circle())
-    mp = MultiLineString(shapes)
-    mp = fit_shape(mp, w, h, p)
-    g = GCode.from_geometry(mp, G0Z, G1Z)
-    im = g.render(0, 0, w, h, 96)
-    im.write_to_png('output.png')
-
-def main():
     tw, th = 6, 8
     w, h = 24-2, 24-2
     p = 0
     shapes = load_shapes()
-    shapes.append(circle())
+    shapes.append(circle(R))
+    shapes.append(circle(R * 1.05))
     mp = MultiLineString(shapes)
     mp = fit_shape(mp, w, h, p)
     g = GCode.from_geometry(mp, G0Z, G1Z)
