@@ -37,5 +37,20 @@ def fetch():
         with open('text/%s.nc' % text, 'w') as fp:
             fp.write(code)
 
+def fetch():
+    texts = [
+        # 'Planet Earth',
+        # 'Lambert Azimuthal Equal-Area',
+        # '0 N 110 W',
+        '0 N 70 E',
+        # 'Michael Fogleman',
+        # 'July 2015',
+    ]
+    for text in texts:
+        print text
+        code = text_to_gcode(text, HEIGHT, G0Z, G1Z, DECIMALS)
+        with open('text/%s.nc' % text, 'w') as fp:
+            fp.write(code)
+
 if __name__ == '__main__':
     fetch()
