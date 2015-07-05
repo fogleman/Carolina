@@ -1,7 +1,7 @@
 from gcode import GCode
 from letters import *
 from math import sin, cos, radians
-from shapely.geometry import LineString, MultiLineString
+from shapely.geometry import LineString, MultiLineString, Polygon
 
 FR = 45
 G0Z = 0.2
@@ -10,50 +10,50 @@ HEADER = GCode(['G90', 'G20', 'G0 Z%s' % G0Z, 'M4', 'G4 P2.0', 'F%s' % FR])
 FOOTER = GCode(['G0 Z%s' % G0Z, 'M8', 'G0 X3 Y6'])
 
 def load_letters():
-    scale = 0.011153752112
+    scale = 0.0109
     shapes = [
-        LineString(A),
-        LineString(B),
-        LineString(C),
-        LineString(D),
-        LineString(E),
-        LineString(F),
-        LineString(G),
-        LineString(H),
-        LineString(I),
-        LineString(J),
-        LineString(K),
-        LineString(L),
-        LineString(M),
-        LineString(N),
-        MultiLineString([LineString(O2), LineString(O1)]),
-        LineString(P),
-        LineString(Q),
-        LineString(R),
-        LineString(S),
-        LineString(T),
-        LineString(U),
-        LineString(V),
-        LineString(W),
-        LineString(X),
-        LineString(Y),
-        LineString(Z),
-        LineString(NUM_0),
-        LineString(NUM_1),
-        LineString(NUM_2),
-        LineString(NUM_3),
-        LineString(NUM_4),
-        LineString(NUM_5),
-        LineString(NUM_6),
-        LineString(NUM_7),
-        LineString(NUM_8),
-        LineString(NUM_9),
+        Polygon(A),
+        Polygon(B),
+        Polygon(C),
+        Polygon(D),
+        Polygon(E),
+        Polygon(F),
+        Polygon(G),
+        Polygon(H),
+        Polygon(I),
+        Polygon(J),
+        Polygon(K),
+        Polygon(L),
+        Polygon(M),
+        Polygon(N),
+        Polygon(O1, [O2]),
+        Polygon(P),
+        Polygon(Q),
+        Polygon(R),
+        Polygon(S),
+        Polygon(T),
+        Polygon(U),
+        Polygon(V),
+        Polygon(W),
+        Polygon(X),
+        Polygon(Y),
+        Polygon(Z),
+        Polygon(NUM_0),
+        Polygon(NUM_1),
+        Polygon(NUM_2),
+        Polygon(NUM_3),
+        Polygon(NUM_4),
+        Polygon(NUM_5),
+        Polygon(NUM_6),
+        Polygon(NUM_7),
+        Polygon(NUM_8),
+        Polygon(NUM_9),
     ]
     result = []
     for shape in shapes:
         # shape = shape.buffer(1.0 / 16 * 90)
         g = GCode.from_geometry(shape, 0.2, -0.1875)
-        g = g.scale(scale, scale).move(3, 0, 0.5, 0)
+        g = g.scale(scale, scale).move(3, 4, 0.5, 0.5)
         result.append(g)
     return result
 

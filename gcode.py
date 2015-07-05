@@ -2,7 +2,7 @@ from collections import namedtuple
 from math import radians, sin, cos, hypot, atan2
 from operator import attrgetter
 from pack import pack
-from shapely.geometry import Polygon, MultiPolygon, LineString, MultiLineString
+from shapely.geometry import Polygon, MultiPolygon, LineString, MultiLineString, LinearRing
 import cairo
 
 DECIMALS = 6
@@ -50,9 +50,12 @@ class GCode(object):
     def from_geometry(geometry, g0z, g1z):
         t = type(geometry)
         if t == Polygon:
-            points = list(geometry.exterior.coords)
-            return GCode.from_points(points, g0z, g1z)
-        if t == LineString:
+            g = GCode()
+            for x in geometry.interiors:
+                g += GCode.from_geometry(x, g0z, g1z)
+            g += GCode.from_geometry(geometry.exterior, g0z, g1z)
+            return g
+        if t == LineString or t == LinearRing:
             points = list(geometry.coords)
             return GCode.from_points(points, g0z, g1z)
         if t in (MultiPolygon, MultiLineString):
