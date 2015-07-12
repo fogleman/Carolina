@@ -1,73 +1,71 @@
 from gcode import GCode
-from letters import *
-from math import sin, cos, radians
-from shapely.geometry import LineString, MultiLineString, Polygon
+from shapely.affinity import translate, scale
+from shapely.geometry import MultiPolygon
+from shapely.wkt import loads
+import foam
+import operator
 
 FR = 45
-G0Z = 0.2
+G0Z = 0.5
 
 HEADER = GCode(['G90', 'G20', 'G0 Z%s' % G0Z, 'M4', 'G4 P2.0', 'F%s' % FR])
 FOOTER = GCode(['G0 Z%s' % G0Z, 'M8', 'G0 X3 Y6'])
 
-def load_letters():
-    scale = 0.0109
-    shapes = [
-        Polygon(A),
-        Polygon(B),
-        Polygon(C),
-        Polygon(D),
-        Polygon(E),
-        Polygon(F),
-        Polygon(G),
-        Polygon(H),
-        Polygon(I),
-        Polygon(J),
-        Polygon(K),
-        Polygon(L),
-        Polygon(M),
-        Polygon(N),
-        Polygon(O1, [O2]),
-        Polygon(P),
-        Polygon(Q),
-        Polygon(R),
-        Polygon(S),
-        Polygon(T),
-        Polygon(U),
-        Polygon(V),
-        Polygon(W),
-        Polygon(X),
-        Polygon(Y),
-        Polygon(Z),
-        Polygon(NUM_0),
-        Polygon(NUM_1),
-        Polygon(NUM_2),
-        Polygon(NUM_3),
-        Polygon(NUM_4),
-        Polygon(NUM_5),
-        Polygon(NUM_6),
-        Polygon(NUM_7),
-        Polygon(NUM_8),
-        Polygon(NUM_9),
-    ]
-    result = []
-    for shape in shapes:
-        # shape = shape.buffer(1.0 / 16 * 90)
-        g = GCode.from_geometry(shape, 0.2, -0.1875)
-        g = g.scale(scale, scale).move(3, 4, 0.5, 0.5)
-        result.append(g)
-    return result
+def load_letter(letter):
+    if letter.isdigit():
+        letter = 'NUM' + letter
+    wkt = getattr(foam, letter)
+    return loads(wkt)
+
+def load_letters(letters):
+    x = 0.0
+    s = 1.82748538
+    p = 0.125
+    polygons = []
+    for letter in letters:
+        polygon = load_letter(letter)
+        polygon = scale(polygon, s, s)
+        x1, y1, x2, y2 = polygon.bounds
+        polygon = translate(polygon, -x1, -y1)
+        polygon = translate(polygon, x)
+        x += (x2 - x1) + p
+        polygons.append(polygon)
+        print polygon.bounds
+    return MultiPolygon(polygons)
 
 def main():
-    gs = load_letters()
-    for g0, letter in zip(gs, 'abcdefghijklmnopqrstuvwxyz0123456789'):
-        g1 = g0.depth(0.2, -0.5)
-        g2 = g0.depth(0.2, -0.9)
-        p1 = HEADER + g0 + FOOTER
-        p2 = HEADER + g1 + g2 + FOOTER
-        p1.save('megan/%s1.nc' % letter)
-        p2.save('megan/%s2.nc' % letter)
-        im = g0.render(0, 0, 6, 8, 96)
-        im.write_to_png('megan/%s.png' % letter)
+    bit = 0.25
+    mp = load_letters('MEGAN')
+    mp = mp.buffer(-bit / 2)
+    mps = []
+    while not mp.is_empty:
+        mps.append(mp)
+        mp = mp.buffer(-bit / 2)
+    g = GCode()
+    for mp in mps:
+        g += GCode.from_geometry(mp, G0Z, -0.21875 * 1.0)
+    g = g.rotate(90).origin().translate(2, 0)
+    g = HEADER + g + FOOTER
+    im = g.render(0, 0, 6, 8, 96)
+    im.write_to_png('megan.png')
+    g.save('megan.nc')
+
+def main2():
+    bit = 0.0625
+    s = 1.82748538
+    for letter in 'MEGAN':
+        p = load_letter(letter)
+        p = scale(p, s, s)
+        p = p.buffer(bit / 2)
+        g = GCode.from_geometry(p, G0Z, -bit)
+        g = g.origin()
+        depths = [-bit, -bit*2, -bit*3, -bit*4]
+        gs = [g.depth(G0Z, d) for d in depths]
+        g = reduce(operator.add, gs)
+        g = HEADER + g + FOOTER
+        im = g.render(0, 0, 6, 8, 96)
+        im.write_to_png('megan-%s.png' % letter)
+        g.save('megan-%s.nc' % letter)
 
 if __name__ == '__main__':
     main()
