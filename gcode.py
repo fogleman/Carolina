@@ -1,5 +1,5 @@
 from collections import namedtuple
-from math import radians, sin, cos, hypot, atan2
+from math import radians, sin, cos, hypot, atan2, ceil
 from operator import attrgetter
 from pack import pack
 from shapely.geometry import Polygon, MultiPolygon, LineString, MultiLineString, LinearRing
@@ -266,6 +266,16 @@ class GCode(object):
                 tokens.append(token)
             lines.append(' '.join(tokens))
         return GCode(lines)
+
+    def multipass(self, g0z, g1z, max_step):
+        passes = int(ceil(abs(g1z / max_step)))
+        step = g1z / passes
+        g = GCode()
+        for i in range(passes):
+            depth = (i + 1) * step
+            print depth
+            g += self.depth(g0z, depth)
+        return g
 
     def crop(self, x1, y1, x2, y2):
         def inside(x, y):
