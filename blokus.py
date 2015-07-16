@@ -1,4 +1,5 @@
 from gcode import GCode
+from math import radians, sin, cos
 from shapely.affinity import translate, scale
 from shapely.geometry import Polygon, MultiPolygon
 from shapely.ops import cascaded_union
@@ -13,22 +14,30 @@ def cell(x, y):
     return translate(Polygon([(0, 0), (1, 0), (1, 1), (0, 1)]), x, y)
 
 def main():
-    a = cell(0, 0)
-    b = cell(1, 0)
-    c = cell(1, 1)
-    # d = cell(1, 2)
-    # e = cell(0, 2)
-    mp = cascaded_union([a, b, c])
+    cells = [
+        cell(0, 0),
+        cell(1, 0),
+        cell(1, 1),
+        cell(2, 1),
+        cell(2, 2),
+    ]
+    mp = cascaded_union(cells)
     g = GCode()
     bit = 0.125
+    for p in cells:
+        g += GCode.from_geometry(p, G0Z, -bit / 2)
     r = 0.25
     steps = 8
     for step in range(steps):
         p = step / (steps - 1.0)
-        x = p * r
+        a = radians(p * 90)
+        x = sin(a) * r
         b = x + bit / 2 - r
         z = r - (r * r - x * x) ** 0.5
-        g += GCode.from_geometry(mp.buffer(b), G0Z, -z/10)
+        print '%.3f, %.3f, %.3f, %.3f' % (p, x, b, z)
+        g += GCode.from_geometry(mp.buffer(b), G0Z, -z)
+    g += GCode.from_geometry(mp.buffer(bit / 2), G0Z, -0.4)
+    g += GCode.from_geometry(mp.buffer(bit / 2), G0Z, -0.6)
     g = g.origin()
     g = HEADER + g + FOOTER
     p = 0.5
