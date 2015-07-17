@@ -22,12 +22,14 @@ def main():
         cell(1, 0),
         cell(1, 1),
         cell(2, 1),
-        cell(2, 2),
+        cell(1, 2),
     ]
     mp = cascaded_union(cells).buffer(-bit).buffer(bit)
     g = GCode()
     for p in cells:
         g += GCode.from_geometry(p, G0Z, -bit / 2)
+    for p in cells:
+        g += GCode.from_geometry(p, G0Z, -bit)
     for step in range(steps):
         p = step / (steps - 1.0)
         a = radians(p * 90)
@@ -37,7 +39,9 @@ def main():
         print '%.3f, %.3f, %.3f, %.3f' % (p, x, b, z)
         g += GCode.from_geometry(mp.buffer(b), G0Z, -z)
     g += GCode.from_geometry(mp.buffer(bit / 2), G0Z, -0.4)
-    g += GCode.from_geometry(mp.buffer(bit / 2), G0Z, -0.6)
+    g += GCode.from_geometry(mp.buffer(bit / 2), G0Z, -0.6, bit + 0.1, 3)
+    g += GCode.from_geometry(mp.buffer(bit / 2), G0Z, -0.7, bit + 0.1, 3)
+    g = g.scale(-1, 1)
     g = g.origin()
     g = HEADER + g + FOOTER
     p = 0.5

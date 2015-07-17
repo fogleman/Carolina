@@ -28,6 +28,40 @@ def pack_gcodes(gcodes, width, height, padding, seed=None):
         result.append(bg)
     return result
 
+def interpolate(a, b, d):
+    x1, y1 = a
+    x2, y2 = b
+    dx, dy = x2 - x1, y2 - y1
+    t = d / hypot(dx, dy)
+    x = x1 + dx * t
+    y = y1 + dy * t
+    return (x, y)
+
+def tab(points, tab_size, tab_spacing):
+    points.append(points[0])
+    px, py = points[0]
+    length = 0
+    thresholds = (tab_size, tab_spacing)
+    index = 0
+    group = [(px, py)]
+    groups = []
+    for x, y in points:
+        while length + hypot(x - px, y - py) > thresholds[index % 2]:
+            ix, iy = interpolate((px, py), (x, y), thresholds[index % 2] - length)
+            group.append((ix, iy))
+            # print group
+            length = 0
+            px, py = ix, iy
+            groups.append(group)
+            group = [(px, py)]
+            index += 1
+        group.append((x, y))
+        length += hypot(x - px, y - py)
+        px, py = x, y
+    if group:
+        groups.append(group)
+    return groups[1::2]
+
 class GCode(object):
 
     @staticmethod
@@ -47,21 +81,31 @@ class GCode(object):
         return GCode(lines)
 
     @staticmethod
-    def from_geometry(geometry, g0z, g1z):
+    def from_points_tabbed(points, g0z, g1z, tab_size, tab_spacing):
+        g = GCode()
+        for points in tab(points, tab_size, tab_spacing):
+            g += GCode.from_points(points, g0z, g1z)
+        return g
+
+    @staticmethod
+    def from_geometry(geometry, g0z, g1z, tab_size=None, tab_spacing=None):
         t = type(geometry)
         if t == Polygon:
             g = GCode()
             for x in geometry.interiors:
-                g += GCode.from_geometry(x, g0z, g1z)
-            g += GCode.from_geometry(geometry.exterior, g0z, g1z)
+                g += GCode.from_geometry(x, g0z, g1z, tab_size, tab_spacing)
+            g += GCode.from_geometry(geometry.exterior, g0z, g1z, tab_size, tab_spacing)
             return g
         if t == LineString or t == LinearRing:
             points = list(geometry.coords)
-            return GCode.from_points(points, g0z, g1z)
+            if tab_size and tab_spacing:
+                return GCode.from_points_tabbed(points, g0z, g1z, tab_size, tab_spacing)
+            else:
+                return GCode.from_points(points, g0z, g1z)
         if t in (MultiPolygon, MultiLineString):
             g = GCode()
             for x in geometry:
-                g += GCode.from_geometry(x, g0z, g1z)
+                g += GCode.from_geometry(x, g0z, g1z, tab_size, tab_spacing)
             return g
         raise Exception('unrecognized geometry type')
 
@@ -353,7 +397,7 @@ class GCode(object):
                     dc.arc(cx, cy, r, a1, a2)
                 else:
                     dc.arc_negative(cx, cy, r, a1, a2)
-            dc.set_line_width(-z * 2)
+            dc.set_line_width(-z * 2 / 20)
             dc.stroke()
             dc.move_to(x, y)
             px, py = x, y
