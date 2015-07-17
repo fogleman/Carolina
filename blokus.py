@@ -14,6 +14,9 @@ def cell(x, y):
     return translate(Polygon([(0, 0), (1, 0), (1, 1), (0, 1)]), x, y)
 
 def main():
+    bit = 0.125
+    r = 0.25
+    steps = 8
     cells = [
         cell(0, 0),
         cell(1, 0),
@@ -21,13 +24,10 @@ def main():
         cell(2, 1),
         cell(2, 2),
     ]
-    mp = cascaded_union(cells)
+    mp = cascaded_union(cells).buffer(-bit).buffer(bit)
     g = GCode()
-    bit = 0.125
     for p in cells:
         g += GCode.from_geometry(p, G0Z, -bit / 2)
-    r = 0.25
-    steps = 8
     for step in range(steps):
         p = step / (steps - 1.0)
         a = radians(p * 90)
@@ -41,7 +41,7 @@ def main():
     g = g.origin()
     g = HEADER + g + FOOTER
     p = 0.5
-    im = g.render(-p, -p, 3 + p, 3 + p, 96)
+    im = g.render(-p, -p, 3 + p, 3 + p, 96*4)
     im.write_to_png('blokus.png')
     g.save('blokus.nc')
 
