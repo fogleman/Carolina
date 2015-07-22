@@ -25,7 +25,7 @@ def laea(pt):
     k = (2 / (1 + sin(clat) * sin(lat) + cos(clat) * cos(lat) * cos(lng - clng))) ** 0.5
     x = k * cos(lat) * sin(lng - clng)
     y = k * (cos(clat) * sin(lat) - sin(clat) * cos(lat) * cos(lng - clng))
-    return (x, y, ok)
+    return (x, y)#, ok)
 
 def circle(r):
     points = []
@@ -51,20 +51,33 @@ def shape_to_polygons(shape):
         points = map(tuple, shape.points[i1:i2])
         points = map(laea, points)
         points = filter(None, points)
-        for a, b in zip(points, points[1:]):
-            if not a[-1] and not b[-1]:
-                continue
-            a = a[:2]
-            b = b[:2]
-            in1 = inside(a)
-            in2 = inside(b)
-            if not in1 and not in2:
-                continue
-            if in1 and not in2:
-                b = adjust(b)
-            if in2 and not in1:
-                a = adjust(a)
-            result.append(LineString([a, b]))
+        p = Polygon(points)
+        p = p.buffer(-0.01)
+        p = p.buffer(0.01)
+        p = p.simplify()
+        if p.is_empty:
+            continue
+        if isinstance(p, Polygon):
+            ps = [p]
+        else:
+            ps = p.geoms
+        for p in ps:
+            points = list(p.exterior.coords)
+            print points
+            for a, b in zip(points, points[1:]):
+                # if not a[-1] and not b[-1]:
+                #     continue
+                a = a[:2]
+                b = b[:2]
+                in1 = inside(a)
+                in2 = inside(b)
+                if not in1 and not in2:
+                    continue
+                if in1 and not in2:
+                    b = adjust(b)
+                if in2 and not in1:
+                    a = adjust(a)
+                result.append(LineString([a, b]))
     return result
 
 def load_shapes():

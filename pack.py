@@ -72,8 +72,8 @@ def pack(width, height, sizes, seed=None):
 def best_seed(width, height, sizes, iterations):
     best = (len(sizes) + 1, None)
     for i in xrange(iterations):
-        print i, iterations
         seed = int(random.getrandbits(31))
         result = pack(width, height, sizes, seed)
         best = min(best, (len(result), seed))
+        print i, iterations, len(result), best
     return best[1]

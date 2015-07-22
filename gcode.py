@@ -1,7 +1,7 @@
 from collections import namedtuple
 from math import radians, sin, cos, hypot, atan2, ceil
 from operator import attrgetter
-from pack import pack
+from pack import pack, best_seed
 from shapely.geometry import Polygon, MultiPolygon, LineString, MultiLineString, LinearRing
 import cairo
 
@@ -15,6 +15,7 @@ def pack_gcodes(gcodes, width, height, padding, seed=None):
     result = []
     sizes = [g.size for g in gcodes]
     sizes = [(w + padding * 2, h + padding * 2) for w, h in sizes]
+    # print best_seed(width, height, sizes, 1000)
     bins = pack(width, height, sizes, seed)
     for b in bins:
         bg = GCode()
@@ -41,7 +42,7 @@ def tab(points, tab_size, tab_spacing):
     points.append(points[0])
     px, py = points[0]
     length = 0
-    thresholds = (tab_size, tab_spacing)
+    thresholds = (tab_spacing, tab_size)
     index = 0
     group = [(px, py)]
     groups = []
@@ -60,7 +61,7 @@ def tab(points, tab_size, tab_spacing):
         px, py = x, y
     if group:
         groups.append(group)
-    return groups[1::2]
+    return groups[::2]
 
 class GCode(object):
 
