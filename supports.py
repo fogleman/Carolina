@@ -34,8 +34,11 @@ def create_mounts():
     g1 = g.move(3, 0.25, 0.5, 0)
     g2 = g.origin().rotate(180).move(3, 5.5, 0.5, 1)
     g = g1 + g2
+    g = g.depth(G0Z, -0.2) + g.depth(G0Z, -0.4) + g.depth(G0Z, -0.6)
+    g = HEADER + g + FOOTER
+    g.save('mounts.nc')
     im = g.render(0, 0, 6, 8, 96)
-    im.write_to_png('supports.png')
+    im.write_to_png('mounts.png')
 
 def create_support(d, bit, angle):
     a = radians(180 - angle)
@@ -56,10 +59,14 @@ def create_supports():
     g = GCode.from_geometry(p, G0Z, -0.1)
     g = g.origin()
     g = pack_gcodes([g] * n, 6, 8, 0.125)[0]
+    g = g.depth(G0Z, -0.2) + g.depth(G0Z, -0.4) + g.depth(G0Z, -0.6)
+    g = HEADER + g + FOOTER
+    g.save('supports.nc')
     im = g.render(0, 0, 6, 8, 96)
     im.write_to_png('supports.png')
 
 def main():
+    create_mounts()
     create_supports()
 
 if __name__ == '__main__':
