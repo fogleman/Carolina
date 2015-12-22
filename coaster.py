@@ -67,23 +67,30 @@ def rounded_square(side, radius):
     points = square(side - radius * 2)
     return Polygon(points).buffer(radius).exterior.coords
 
-def coaster(side, corner_radius, circle_diameter, circle_depth, depth, bit):
+def coaster(style, side, corner_radius, circle_diameter, circle_depth, depth, bit):
     n = 120
     points = filled_circle(circle_diameter / 2.0 - bit / 2.0, n, bit / 4.0)
     g = GCode.from_points(points, G0Z, -circle_depth)
-    # points = rounded_square(side + bit, corner_radius)
-    # points = circle(side / 2.0, n)
-    # points = rounded_polygon(6, side / 2.0, corner_radius)
-    points = wavy_circle(side / 2.0, 360, 0.2, 7)
+    if style == 1:
+        points = rounded_square(side + bit, corner_radius)
+    elif style == 2:
+        points = circle(side / 2.0, n)
+    elif style == 3:
+        points = rounded_polygon(6, side / 2.0, corner_radius)
+    elif style == 4:
+        points = wavy_circle(side / 2.0, 360, 0.2, 7)
+    else:
+        raise Exception('invalid style')
     g += GCode.from_points(points, G0Z, -depth).multipass(G0Z, -depth, bit)
     return g.origin()
 
 def main():
-    g = coaster(5, 0.5, 4, 0.40625, 0.8, 0.125)
-    g = HEADER + g + FOOTER
-    g.save('coaster.nc')
-    im = g.render(0, 0, 6, 8, 96)
-    im.write_to_png('coaster.png')
+    for style in range(1, 5):
+        g = coaster(style, 5, 0.5, 4, 0.40625, 0.8, 0.125)
+        g = HEADER + g + FOOTER
+        g.save('coaster%d.nc' % style)
+        im = g.render(0, 0, 6, 8, 96)
+        im.write_to_png('coaster%d.png' % style)
 
 if __name__ == '__main__':
     main()
